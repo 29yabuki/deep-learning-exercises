@@ -1,0 +1,5 @@
+ME1/.gradio/
+ME2/.gradio/
+ME2/models/
+ME2/yolo11n-pose.pt
+ME3/.env
