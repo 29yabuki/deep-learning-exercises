@@ -63,6 +63,11 @@ class VehicleDetectionApp:
         self.display_queue = Queue()
         self.stop_event = Event()
         self.username = "29yabuki"
+        self.model_metrics = {
+            'mAP': 0.0,
+            'inference_speed': 0.0,
+            'fps': 0.0
+        }
         
     def setup_video_processing(self):
         # Start processing thread
@@ -84,9 +89,18 @@ class VehicleDetectionApp:
         
         # Title on left
         title_label = ttk.Label(header_frame, text="ME 5: Vehicle Counter v2", 
-                              font=('Helvetica', 16, 'bold'))
+                            font=('Helvetica', 16, 'bold'))
         title_label.pack(side=tk.LEFT)
-                
+        
+        # DateTime on right
+        self.datetime_label = ttk.Label(header_frame, font=('Helvetica', 10))
+        self.datetime_label.pack(side=tk.RIGHT)
+        
+        # Username on right (before datetime)
+        user_label = ttk.Label(header_frame, text=f"User: {self.username}", 
+                            font=('Helvetica', 10))
+        user_label.pack(side=tk.RIGHT, padx=20)
+        
         # Feed frame
         feed_frame = ttk.LabelFrame(main_container, text="Feed", padding="10")
         feed_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
@@ -98,17 +112,9 @@ class VehicleDetectionApp:
         bottom_frame = ttk.Frame(main_container)
         bottom_frame.pack(fill=tk.X)
         
-        # Output frame above controls
-        output_frame = ttk.LabelFrame(bottom_frame, text="Output", padding="10")
-        output_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        self.count_label = ttk.Label(output_frame, text="Total Vehicles: 0",
-                                   font=('Helvetica', 14, 'bold'))
-        self.count_label.pack(fill=tk.X)
-        
-        # Controls frame below output
+        # Controls frame on left
         controls_frame = ttk.LabelFrame(bottom_frame, text="Controls", padding="10")
-        controls_frame.pack(fill=tk.X)
+        controls_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         # File controls
         file_frame = ttk.Frame(controls_frame)
@@ -120,15 +126,15 @@ class VehicleDetectionApp:
         
         # Upload buttons on left, clear button on right
         self.image_btn = ttk.Button(button_frame, text="Upload Image", 
-                                  command=self.upload_image, style='Custom.TButton')
+                                command=self.upload_image, style='Custom.TButton')
         self.image_btn.pack(side=tk.LEFT, padx=(0, 5))
         
         self.video_btn = ttk.Button(button_frame, text="Upload Video", 
-                                  command=self.upload_video, style='Custom.TButton')
+                                command=self.upload_video, style='Custom.TButton')
         self.video_btn.pack(side=tk.LEFT)
         
         self.clear_btn = ttk.Button(button_frame, text="Clear", 
-                                  command=self.clear_display, style='Custom.TButton')
+                                command=self.clear_display, style='Custom.TButton')
         self.clear_btn.pack(side=tk.RIGHT)
         
         self.file_label = ttk.Label(file_frame, text="No file selected")
@@ -139,6 +145,41 @@ class VehicleDetectionApp:
         
         # Settings
         self.create_settings_frame(controls_frame)
+        
+        # Output frame on right
+        output_frame = ttk.LabelFrame(bottom_frame, text="Output", padding="10", width=200)
+        output_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(10, 0))
+        output_frame.pack_propagate(False)
+        
+        # Vehicle count
+        self.count_label = ttk.Label(output_frame, text="Total Vehicles: 0",
+                                font=('Helvetica', 14, 'bold'))
+        self.count_label.pack(fill=tk.X)
+        
+        # Add model metrics display
+        metrics_frame = ttk.Frame(output_frame)
+        metrics_frame.pack(fill=tk.X, pady=(5, 0))
+        
+        # mAP display
+        map_frame = ttk.Frame(metrics_frame)
+        map_frame.pack(fill=tk.X, pady=2)
+        ttk.Label(map_frame, text="mAP:").pack(side=tk.LEFT)
+        self.map_label = ttk.Label(map_frame, text="0.0")
+        self.map_label.pack(side=tk.RIGHT)
+        
+        # Speed display
+        speed_frame = ttk.Frame(metrics_frame)
+        speed_frame.pack(fill=tk.X, pady=2)
+        ttk.Label(speed_frame, text="Inference:").pack(side=tk.LEFT)
+        self.speed_label = ttk.Label(speed_frame, text="0.0")
+        self.speed_label.pack(side=tk.RIGHT)
+        
+        # FPS display
+        fps_frame = ttk.Frame(metrics_frame)
+        fps_frame.pack(fill=tk.X, pady=2)
+        ttk.Label(fps_frame, text="FPS:").pack(side=tk.LEFT)
+        self.fps_label = ttk.Label(fps_frame, text="0.0")
+        self.fps_label.pack(side=tk.RIGHT)
         
     def create_video_controls(self, parent):
         self.video_controls_frame = ttk.Frame(parent)
@@ -227,9 +268,24 @@ class VehicleDetectionApp:
             img = cv2.imread(image_path)
             if img is None:
                 raise ValueError("Failed to load image")
-                
+            
+            # Time the inference
+            start_time = time.time()
             results = self.model(img, conf=self.confidence_threshold.get(), 
                                iou=self.iou_threshold.get())[0]
+            end_time = time.time()
+            
+            # Calculate metrics
+            inference_time = (end_time - start_time) * 1000  # Convert to ms
+            fps = 1 / (end_time - start_time)
+            
+            # Update metrics
+            self.model_metrics['inference_speed'] = inference_time
+            self.model_metrics['fps'] = fps
+            
+            # Update labels
+            self.speed_label.config(text=f"{inference_time:.1f}")
+            self.fps_label.config(text=f"{fps:.1f}")
             
             annotated_img = self.draw_detections(img, results)
             self.display_image(annotated_img)
@@ -247,9 +303,24 @@ class VehicleDetectionApp:
                 frame = self.process_queue.get()
                 if frame is None:
                     continue
-                    
+                
+                # Time the inference
+                start_time = time.time()
                 results = self.model(frame, conf=self.confidence_threshold.get(), 
                                   iou=self.iou_threshold.get())[0]
+                end_time = time.time()
+                
+                # Calculate metrics
+                inference_time = (end_time - start_time) * 1000  # Convert to ms
+                fps = 1 / (end_time - start_time)
+                
+                # Update metrics
+                self.model_metrics['inference_speed'] = inference_time
+                self.model_metrics['fps'] = fps
+                
+                # Update labels
+                self.speed_label.config(text=f"{inference_time:.1f}")
+                self.fps_label.config(text=f"{fps:.1f}")
                 
                 annotated_frame = self.draw_detections(frame, results)
                 self.display_queue.put(annotated_frame)
