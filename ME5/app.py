@@ -48,7 +48,6 @@ class VehicleDetectionApp:
         style.configure('TLabelframe.Label', background=self.bg_color, foreground=self.fg_color)
         style.configure('Custom.TButton', padding=5, background=self.accent_color)
         style.configure('Horizontal.TScale', background=self.bg_color, troughcolor=self.accent_color)
-        
         self.root.configure(bg=self.bg_color)
         
     def setup_variables(self):
@@ -88,18 +87,13 @@ class VehicleDetectionApp:
         header_frame.pack(fill=tk.X, pady=(0, 10))
         
         # Title on left
-        title_label = ttk.Label(header_frame, text="ME 5: Vehicle Counter v2", 
+        title_label = ttk.Label(header_frame, text="ME 5: Vehicle Counter",
                             font=('Helvetica', 16, 'bold'))
         title_label.pack(side=tk.LEFT)
         
         # DateTime on right
         self.datetime_label = ttk.Label(header_frame, font=('Helvetica', 10))
         self.datetime_label.pack(side=tk.RIGHT)
-        
-        # Username on right (before datetime)
-        user_label = ttk.Label(header_frame, text=f"User: {self.username}", 
-                            font=('Helvetica', 10))
-        user_label.pack(side=tk.RIGHT, padx=20)
         
         # Feed frame
         feed_frame = ttk.LabelFrame(main_container, text="Feed", padding="10")
