@@ -63,7 +63,6 @@ class VehicleDetectionApp:
         self.stop_event = Event()
         self.username = "29yabuki"
         self.model_metrics = {
-            'mAP': 0.0,
             'inference_speed': 0.0,
             'fps': 0.0
         }
@@ -153,13 +152,6 @@ class VehicleDetectionApp:
         # Add model metrics display
         metrics_frame = ttk.Frame(output_frame)
         metrics_frame.pack(fill=tk.X, pady=(5, 0))
-        
-        # mAP display
-        map_frame = ttk.Frame(metrics_frame)
-        map_frame.pack(fill=tk.X, pady=2)
-        ttk.Label(map_frame, text="mAP:").pack(side=tk.LEFT)
-        self.map_label = ttk.Label(map_frame, text="0.0")
-        self.map_label.pack(side=tk.RIGHT)
         
         # Speed display
         speed_frame = ttk.Frame(metrics_frame)
@@ -353,11 +345,6 @@ class VehicleDetectionApp:
                 label = f'{results.names[cls]} {conf:.2f}'
                 (label_width, label_height), _ = cv2.getTextSize(
                     label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-                
-                cv2.rectangle(annotated_img, (x1, y1 - label_height - 5),
-                            (x1 + label_width, y1), (0, 0, 255), -1)
-                cv2.putText(annotated_img, label, (x1, y1 - 5),
-                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
         # Update count label
         self.count_label.config(text=f"Total Vehicles: {vehicle_count}")
